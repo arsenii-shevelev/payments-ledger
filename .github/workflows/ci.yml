@@ -19,3 +19,13 @@ jobs:
 
       - name: Build and test
         run: ./mvnw -B verify
+
+      - name: Coverage summary
+        run: |
+          awk -F, 'NR > 1 { missed += $8; covered += $9 } END { printf "Line coverage: %.1f%%\n", covered * 100 / (missed + covered) }' \
+            target/site/jacoco/jacoco.csv >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: coverage-report
+          path: target/site/jacoco
