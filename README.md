@@ -7,7 +7,7 @@ Built with Java 21, Spring Boot 4 and PostgreSQL.
 
 ## Running it
 
-You need Java 21 and Docker.
+Need Java 21 and Docker.
 
 ```
 ./mvnw spring-boot:run
@@ -26,13 +26,14 @@ Spring Boot starts Postgres from `compose.yaml` on its own.
 |---|---|---|
 | POST | `/accounts` | open an account |
 | GET | `/accounts/{id}` | get an account |
+| POST | `/accounts/{id}/deposits` | deposit money |
 
 ## Status
 
 Work in progress.
 
 - [x] accounts
-- [ ] deposits
+- [x] deposits
 - [ ] transfers between accounts
 - [ ] idempotency keys
 - [ ] account statements

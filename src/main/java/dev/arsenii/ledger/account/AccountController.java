@@ -34,4 +34,9 @@ public class AccountController {
 		return AccountResponse.from(accountService.getAccount(id));
 	}
 
+	@PostMapping("/{id}/deposits")
+	public AccountResponse deposit(@PathVariable UUID id, @Valid @RequestBody DepositRequest request) {
+		return AccountResponse.from(accountService.deposit(id, request.amount()));
+	}
+
 }

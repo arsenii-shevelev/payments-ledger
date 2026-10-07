@@ -41,6 +41,10 @@ public class Account {
 		this.createdAt = Instant.now();
 	}
 
+	public void deposit(BigDecimal amount) {
+		balance = balance.add(amount);
+	}
+
 	public UUID getId() {
 		return id;
 	}

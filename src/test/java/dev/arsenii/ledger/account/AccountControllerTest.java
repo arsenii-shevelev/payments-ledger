@@ -8,6 +8,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -62,6 +63,40 @@ class AccountControllerTest {
 		mockMvc.perform(get("/accounts/{id}", id))
 				.andExpect(status().isNotFound())
 				.andExpect(jsonPath("$.detail").value("Account " + id + " not found"));
+	}
+
+	@Test
+	void depositsMoney() throws Exception {
+		UUID id = UUID.fromString("7f3c2a1e-5b4d-4c6e-9a8b-1d2e3f4a5b6c");
+		Account account = accountWithId(id, "Anna Virtanen", "EUR");
+		account.deposit(new BigDecimal("150.25"));
+		when(accountService.deposit(id, new BigDecimal("150.25"))).thenReturn(account);
+
+		mockMvc.perform(post("/accounts/{id}/deposits", id)
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("{\"amount\": 150.25}"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.balance").value(150.25));
+	}
+
+	@Test
+	void rejectsNegativeDeposit() throws Exception {
+		mockMvc.perform(post("/accounts/{id}/deposits", UUID.fromString("7f3c2a1e-5b4d-4c6e-9a8b-1d2e3f4a5b6c"))
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("{\"amount\": -10}"))
+				.andExpect(status().isBadRequest());
+
+		verify(accountService, never()).deposit(any(), any());
+	}
+
+	@Test
+	void rejectsDepositWithMoreThanTwoDecimals() throws Exception {
+		mockMvc.perform(post("/accounts/{id}/deposits", UUID.fromString("7f3c2a1e-5b4d-4c6e-9a8b-1d2e3f4a5b6c"))
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("{\"amount\": 10.005}"))
+				.andExpect(status().isBadRequest());
+
+		verify(accountService, never()).deposit(any(), any());
 	}
 
 	private Account accountWithId(UUID id, String ownerName, String currency) {
