@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -27,7 +28,7 @@ public class TransferService {
 	}
 
 	@Transactional
-	public Transfer transfer(UUID fromAccountId, UUID toAccountId, BigDecimal amount) {
+	public Transfer transfer(UUID fromAccountId, UUID toAccountId, BigDecimal amount, String idempotencyKey) {
 		if (fromAccountId.equals(toAccountId)) {
 			throw new InvalidTransferException("Cannot transfer money to the same account");
 		}
@@ -42,6 +43,16 @@ public class TransferService {
 			from = lockAccount(fromAccountId);
 		}
 
+		if (idempotencyKey != null) {
+			Optional<Transfer> existing = transferRepository.findByIdempotencyKey(idempotencyKey);
+			if (existing.isPresent()) {
+				if (!existing.get().isSameRequest(fromAccountId, toAccountId, amount)) {
+					throw new InvalidTransferException("Idempotency key was already used for a different transfer");
+				}
+				return existing.get();
+			}
+		}
+
 		if (!from.getCurrency().equals(to.getCurrency())) {
 			throw new InvalidTransferException("Accounts have different currencies");
 		}
@@ -49,7 +60,7 @@ public class TransferService {
 		from.withdraw(amount);
 		to.deposit(amount);
 
-		Transfer transfer = transferRepository.save(new Transfer(fromAccountId, toAccountId, amount));
+		Transfer transfer = transferRepository.save(new Transfer(fromAccountId, toAccountId, amount, idempotencyKey));
 		ledgerEntryRepository.save(
 				new LedgerEntry(fromAccountId, EntryType.TRANSFER_OUT, amount.negate(), transfer.getId()));
 		ledgerEntryRepository.save(

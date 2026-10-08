@@ -55,7 +55,7 @@ class TransferServiceTest {
 		when(accountRepository.findByIdForUpdate(SECOND_ID)).thenReturn(Optional.of(to));
 		when(transferRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
-		transferService.transfer(FIRST_ID, SECOND_ID, new BigDecimal("40.00"));
+		transferService.transfer(FIRST_ID, SECOND_ID, new BigDecimal("40.00"), null);
 
 		assertThat(from.getBalance()).isEqualByComparingTo("60.00");
 		assertThat(to.getBalance()).isEqualByComparingTo("40.00");
@@ -74,7 +74,7 @@ class TransferServiceTest {
 		when(accountRepository.findByIdForUpdate(SECOND_ID)).thenReturn(Optional.of(account(SECOND_ID, "EUR", "50.00")));
 		when(transferRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
-		transferService.transfer(SECOND_ID, FIRST_ID, new BigDecimal("10.00"));
+		transferService.transfer(SECOND_ID, FIRST_ID, new BigDecimal("10.00"), null);
 
 		InOrder inOrder = inOrder(accountRepository);
 		inOrder.verify(accountRepository).findByIdForUpdate(FIRST_ID);
@@ -83,7 +83,7 @@ class TransferServiceTest {
 
 	@Test
 	void rejectsTransferToSameAccount() {
-		assertThatThrownBy(() -> transferService.transfer(FIRST_ID, FIRST_ID, new BigDecimal("10.00")))
+		assertThatThrownBy(() -> transferService.transfer(FIRST_ID, FIRST_ID, new BigDecimal("10.00"), null))
 				.isInstanceOf(InvalidTransferException.class);
 
 		verifyNoInteractions(accountRepository, transferRepository, ledgerEntryRepository);
@@ -96,10 +96,41 @@ class TransferServiceTest {
 		when(accountRepository.findByIdForUpdate(FIRST_ID)).thenReturn(Optional.of(from));
 		when(accountRepository.findByIdForUpdate(SECOND_ID)).thenReturn(Optional.of(to));
 
-		assertThatThrownBy(() -> transferService.transfer(FIRST_ID, SECOND_ID, new BigDecimal("10.00")))
+		assertThatThrownBy(() -> transferService.transfer(FIRST_ID, SECOND_ID, new BigDecimal("10.00"), null))
 				.isInstanceOf(InvalidTransferException.class);
 
 		assertThat(from.getBalance()).isEqualByComparingTo("100.00");
+		verify(ledgerEntryRepository, never()).save(any());
+	}
+
+	@Test
+	void returnsExistingTransferWhenKeyIsRepeated() {
+		Account from = account(FIRST_ID, "EUR", "60.00");
+		Account to = account(SECOND_ID, "EUR", "40.00");
+		Transfer existing = new Transfer(FIRST_ID, SECOND_ID, new BigDecimal("40.00"), "order-1001");
+		when(accountRepository.findByIdForUpdate(FIRST_ID)).thenReturn(Optional.of(from));
+		when(accountRepository.findByIdForUpdate(SECOND_ID)).thenReturn(Optional.of(to));
+		when(transferRepository.findByIdempotencyKey("order-1001")).thenReturn(Optional.of(existing));
+
+		Transfer result = transferService.transfer(FIRST_ID, SECOND_ID, new BigDecimal("40.00"), "order-1001");
+
+		assertThat(result).isSameAs(existing);
+		assertThat(from.getBalance()).isEqualByComparingTo("60.00");
+		assertThat(to.getBalance()).isEqualByComparingTo("40.00");
+		verify(transferRepository, never()).save(any());
+		verify(ledgerEntryRepository, never()).save(any());
+	}
+
+	@Test
+	void rejectsKeyUsedForDifferentTransfer() {
+		when(accountRepository.findByIdForUpdate(FIRST_ID)).thenReturn(Optional.of(account(FIRST_ID, "EUR", "100.00")));
+		when(accountRepository.findByIdForUpdate(SECOND_ID)).thenReturn(Optional.of(account(SECOND_ID, "EUR", "0.00")));
+		when(transferRepository.findByIdempotencyKey("order-1001"))
+				.thenReturn(Optional.of(new Transfer(FIRST_ID, SECOND_ID, new BigDecimal("40.00"), "order-1001")));
+
+		assertThatThrownBy(() -> transferService.transfer(FIRST_ID, SECOND_ID, new BigDecimal("50.00"), "order-1001"))
+				.isInstanceOf(InvalidTransferException.class);
+
 		verify(ledgerEntryRepository, never()).save(any());
 	}
 

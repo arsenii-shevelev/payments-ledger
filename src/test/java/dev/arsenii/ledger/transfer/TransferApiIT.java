@@ -93,6 +93,39 @@ class TransferApiIT {
 	}
 
 	@Test
+	void repeatedRequestWithSameKeyMovesMoneyOnce() throws Exception {
+		UUID from = openAccount("Mikko Laine", "EUR");
+		UUID to = openAccount("Laura Nieminen", "EUR");
+		deposit(from, "100.00");
+
+		String first = transferWithKey(from, to, "30.00", "retry-" + from);
+		String second = transferWithKey(from, to, "30.00", "retry-" + from);
+
+		assertThat(second).isEqualTo(first);
+		mockMvc.perform(get("/accounts/{id}", from))
+				.andExpect(jsonPath("$.balance").value(70.0));
+		mockMvc.perform(get("/accounts/{id}", to))
+				.andExpect(jsonPath("$.balance").value(30.0));
+	}
+
+	@Test
+	void sameKeyWithDifferentAmountIsRejected() throws Exception {
+		UUID from = openAccount("Mikko Laine", "EUR");
+		UUID to = openAccount("Laura Nieminen", "EUR");
+		deposit(from, "100.00");
+		transferWithKey(from, to, "30.00", "reused-" + from);
+
+		mockMvc.perform(post("/transfers")
+						.header("Idempotency-Key", "reused-" + from)
+						.contentType(MediaType.APPLICATION_JSON)
+						.content(transferJson(from, to, "45.00")))
+				.andExpect(status().isUnprocessableContent());
+
+		mockMvc.perform(get("/accounts/{id}", from))
+				.andExpect(jsonPath("$.balance").value(70.0));
+	}
+
+	@Test
 	void transferFromUnknownAccountReturnsNotFound() throws Exception {
 		UUID unknown = UUID.fromString("00000000-0000-0000-0000-000000000004");
 		UUID to = openAccount("Laura Nieminen", "EUR");
@@ -112,6 +145,17 @@ class TransferApiIT {
 				.getResponse()
 				.getHeader("Location");
 		return UUID.fromString(location.substring(location.lastIndexOf('/') + 1));
+	}
+
+	private String transferWithKey(UUID from, UUID to, String amount, String key) throws Exception {
+		return mockMvc.perform(post("/transfers")
+						.header("Idempotency-Key", key)
+						.contentType(MediaType.APPLICATION_JSON)
+						.content(transferJson(from, to, amount)))
+				.andExpect(status().isCreated())
+				.andReturn()
+				.getResponse()
+				.getHeader("Location");
 	}
 
 	private void deposit(UUID accountId, String amount) throws Exception {
