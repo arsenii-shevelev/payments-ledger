@@ -2,8 +2,8 @@
 
 ![CI](https://github.com/arsenii-shevelev/payments-ledger/actions/workflows/ci.yml/badge.svg)
 
-A small payments ledger service: accounts, deposits and transfers with double-entry bookkeeping.
-Built with Java 21, Spring Boot 4 and PostgreSQL.
+A small payments ledger with accounts, deposits and transfers between them. Every change of a balance is also written to a ledger, so the history is always there.
+Java 21, Spring Boot 4, PostgreSQL.
 
 ## Running it
 
@@ -32,19 +32,20 @@ Spring Boot starts Postgres from `compose.yaml` on its own.
 
 ## Transfers
 
-A transfer locks both accounts (`select ... for update`) in the order of their ids, so two transfers going in opposite directions can't deadlock.
-It writes two ledger entries: a negative one for the sender and a positive one for the receiver, so every transfer adds up to zero.
+Both accounts get locked with `select ... for update`, always the one with the smaller id first. Otherwise two transfers going opposite ways could deadlock.
 
-Transfers between different currencies or without enough money on the account are rejected with `422`.
+Transfers are double-entry. Each one adds two ledger entries, minus on the sender's side and plus on the receiver's, so together they come to zero.
+
+If the currencies don't match or there isn't enough money, you get `422`.
 
 ### Retries
 
-`POST /transfers` takes an optional `Idempotency-Key` header. If a request with the same key comes again (for example after a timeout), the original transfer is returned and no money moves a second time.
-Keys are scoped to the sending account, and reusing one for a different transfer gives `422`.
+You can send an `Idempotency-Key` header with `POST /transfers`. If the same request comes in again with that key, say after a timeout, you get the first transfer back and nothing is moved twice.
+Keys only have to be unique per sending account. Using the same key for a different transfer returns `422`.
 
 ## Auth
 
-There is no authentication in this service on purpose. It's meant to run behind a gateway that checks who the caller is and which accounts they can use.
+No auth here. The idea is that a gateway in front of the service checks who's calling and which accounts they can touch.
 
 ## Status
 
