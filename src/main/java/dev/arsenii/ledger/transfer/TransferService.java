@@ -44,7 +44,8 @@ public class TransferService {
 		}
 
 		if (idempotencyKey != null) {
-			Optional<Transfer> existing = transferRepository.findByIdempotencyKey(idempotencyKey);
+			Optional<Transfer> existing =
+					transferRepository.findByFromAccountIdAndIdempotencyKey(fromAccountId, idempotencyKey);
 			if (existing.isPresent()) {
 				if (!existing.get().isSameRequest(fromAccountId, toAccountId, amount)) {
 					throw new InvalidTransferException("Idempotency key was already used for a different transfer");

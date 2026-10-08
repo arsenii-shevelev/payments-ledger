@@ -110,7 +110,7 @@ class TransferServiceTest {
 		Transfer existing = new Transfer(FIRST_ID, SECOND_ID, new BigDecimal("40.00"), "order-1001");
 		when(accountRepository.findByIdForUpdate(FIRST_ID)).thenReturn(Optional.of(from));
 		when(accountRepository.findByIdForUpdate(SECOND_ID)).thenReturn(Optional.of(to));
-		when(transferRepository.findByIdempotencyKey("order-1001")).thenReturn(Optional.of(existing));
+		when(transferRepository.findByFromAccountIdAndIdempotencyKey(FIRST_ID, "order-1001")).thenReturn(Optional.of(existing));
 
 		Transfer result = transferService.transfer(FIRST_ID, SECOND_ID, new BigDecimal("40.00"), "order-1001");
 
@@ -125,7 +125,7 @@ class TransferServiceTest {
 	void rejectsKeyUsedForDifferentTransfer() {
 		when(accountRepository.findByIdForUpdate(FIRST_ID)).thenReturn(Optional.of(account(FIRST_ID, "EUR", "100.00")));
 		when(accountRepository.findByIdForUpdate(SECOND_ID)).thenReturn(Optional.of(account(SECOND_ID, "EUR", "0.00")));
-		when(transferRepository.findByIdempotencyKey("order-1001"))
+		when(transferRepository.findByFromAccountIdAndIdempotencyKey(FIRST_ID, "order-1001"))
 				.thenReturn(Optional.of(new Transfer(FIRST_ID, SECOND_ID, new BigDecimal("40.00"), "order-1001")));
 
 		assertThatThrownBy(() -> transferService.transfer(FIRST_ID, SECOND_ID, new BigDecimal("50.00"), "order-1001"))

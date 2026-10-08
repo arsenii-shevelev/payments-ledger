@@ -31,7 +31,7 @@ public class Transfer {
 	@Column(nullable = false)
 	private Instant createdAt;
 
-	@Column(length = 100, unique = true)
+	@Column(length = 100)
 	private String idempotencyKey;
 
 	protected Transfer() {

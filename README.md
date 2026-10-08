@@ -40,7 +40,7 @@ Transfers between different currencies or without enough money on the account ar
 ### Retries
 
 `POST /transfers` takes an optional `Idempotency-Key` header. If a request with the same key comes again (for example after a timeout), the original transfer is returned and no money moves a second time.
-Reusing a key for a different transfer gives `422`.
+Keys are scoped to the sending account, and reusing one for a different transfer gives `422`.
 
 ## Auth
 

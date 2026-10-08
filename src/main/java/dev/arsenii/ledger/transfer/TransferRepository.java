@@ -7,6 +7,6 @@ import java.util.UUID;
 
 public interface TransferRepository extends JpaRepository<Transfer, UUID> {
 
-	Optional<Transfer> findByIdempotencyKey(String idempotencyKey);
+	Optional<Transfer> findByFromAccountIdAndIdempotencyKey(UUID fromAccountId, String idempotencyKey);
 
 }

@@ -126,6 +126,23 @@ class TransferApiIT {
 	}
 
 	@Test
+	void sameKeyFromDifferentSendersDoesNotClash() throws Exception {
+		UUID first = openAccount("Mikko Laine", "EUR");
+		UUID second = openAccount("Laura Nieminen", "EUR");
+		UUID to = openAccount("Erik Lindqvist", "EUR");
+		deposit(first, "50.00");
+		deposit(second, "50.00");
+
+		String key = "shared-" + to;
+		String firstTransfer = transferWithKey(first, to, "10.00", key);
+		String secondTransfer = transferWithKey(second, to, "20.00", key);
+
+		assertThat(secondTransfer).isNotEqualTo(firstTransfer);
+		mockMvc.perform(get("/accounts/{id}", to))
+				.andExpect(jsonPath("$.balance").value(30.0));
+	}
+
+	@Test
 	void transferFromUnknownAccountReturnsNotFound() throws Exception {
 		UUID unknown = UUID.fromString("00000000-0000-0000-0000-000000000004");
 		UUID to = openAccount("Laura Nieminen", "EUR");
