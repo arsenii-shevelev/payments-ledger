@@ -27,6 +27,15 @@ Spring Boot starts Postgres from `compose.yaml` on its own.
 | POST | `/accounts` | open an account |
 | GET | `/accounts/{id}` | get an account |
 | POST | `/accounts/{id}/deposits` | deposit money |
+| POST | `/transfers` | transfer money between accounts |
+| GET | `/transfers/{id}` | get a transfer |
+
+## Transfers
+
+A transfer locks both accounts (`select ... for update`) in the order of their ids, so two transfers going in opposite directions can't deadlock.
+It writes two ledger entries: a negative one for the sender and a positive one for the receiver, so every transfer adds up to zero.
+
+Transfers between different currencies or without enough money on the account are rejected with `422`.
 
 ## Status
 
@@ -34,6 +43,6 @@ Work in progress.
 
 - [x] accounts
 - [x] deposits
-- [ ] transfers between accounts
+- [x] transfers between accounts
 - [ ] idempotency keys
 - [ ] account statements
