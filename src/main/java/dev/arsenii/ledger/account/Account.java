@@ -45,6 +45,13 @@ public class Account {
 		balance = balance.add(amount);
 	}
 
+	public void withdraw(BigDecimal amount) {
+		if (balance.compareTo(amount) < 0) {
+			throw new InsufficientFundsException(id);
+		}
+		balance = balance.subtract(amount);
+	}
+
 	public UUID getId() {
 		return id;
 	}

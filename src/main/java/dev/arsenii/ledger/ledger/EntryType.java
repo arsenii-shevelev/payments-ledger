@@ -1,5 +1,7 @@
 package dev.arsenii.ledger.ledger;
 
 public enum EntryType {
-	DEPOSIT
+	DEPOSIT,
+	TRANSFER_OUT,
+	TRANSFER_IN
 }
