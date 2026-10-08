@@ -37,6 +37,15 @@ It writes two ledger entries: a negative one for the sender and a positive one f
 
 Transfers between different currencies or without enough money on the account are rejected with `422`.
 
+### Retries
+
+`POST /transfers` takes an optional `Idempotency-Key` header. If a request with the same key comes again (for example after a timeout), the original transfer is returned and no money moves a second time.
+Keys are scoped to the sending account, and reusing one for a different transfer gives `422`.
+
+## Auth
+
+There is no authentication in this service on purpose. It's meant to run behind a gateway that checks who the caller is and which accounts they can use.
+
 ## Status
 
 Work in progress.
@@ -44,5 +53,5 @@ Work in progress.
 - [x] accounts
 - [x] deposits
 - [x] transfers between accounts
-- [ ] idempotency keys
+- [x] idempotency keys for transfers
 - [ ] account statements

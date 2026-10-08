@@ -39,7 +39,7 @@ class TransferControllerTest {
 		UUID id = UUID.fromString("5c6d7e8f-9a0b-4c1d-8e2f-3a4b5c6d7e8f");
 		Transfer transfer = new Transfer(FROM_ID, TO_ID, new BigDecimal("25.50"));
 		ReflectionTestUtils.setField(transfer, "id", id);
-		when(transferService.transfer(FROM_ID, TO_ID, new BigDecimal("25.50"))).thenReturn(transfer);
+		when(transferService.transfer(FROM_ID, TO_ID, new BigDecimal("25.50"), null)).thenReturn(transfer);
 
 		mockMvc.perform(post("/transfers")
 						.contentType(MediaType.APPLICATION_JSON)
@@ -58,12 +58,12 @@ class TransferControllerTest {
 						.content(transferJson("0")))
 				.andExpect(status().isBadRequest());
 
-		verify(transferService, never()).transfer(any(), any(), any());
+		verify(transferService, never()).transfer(any(), any(), any(), any());
 	}
 
 	@Test
 	void returnsUnprocessableContentWhenFundsAreInsufficient() throws Exception {
-		when(transferService.transfer(FROM_ID, TO_ID, new BigDecimal("500.00")))
+		when(transferService.transfer(FROM_ID, TO_ID, new BigDecimal("500.00"), null))
 				.thenThrow(new InsufficientFundsException(FROM_ID));
 
 		mockMvc.perform(post("/transfers")
@@ -71,6 +71,30 @@ class TransferControllerTest {
 						.content(transferJson("500.00")))
 				.andExpect(status().isUnprocessableContent())
 				.andExpect(jsonPath("$.detail").value("Account " + FROM_ID + " has insufficient funds"));
+	}
+
+	@Test
+	void passesIdempotencyKeyToService() throws Exception {
+		Transfer transfer = new Transfer(FROM_ID, TO_ID, new BigDecimal("10.00"), "order-1001");
+		ReflectionTestUtils.setField(transfer, "id", UUID.fromString("5c6d7e8f-9a0b-4c1d-8e2f-3a4b5c6d7e8f"));
+		when(transferService.transfer(FROM_ID, TO_ID, new BigDecimal("10.00"), "order-1001")).thenReturn(transfer);
+
+		mockMvc.perform(post("/transfers")
+						.header("Idempotency-Key", "order-1001")
+						.contentType(MediaType.APPLICATION_JSON)
+						.content(transferJson("10.00")))
+				.andExpect(status().isCreated());
+	}
+
+	@Test
+	void rejectsTooLongIdempotencyKey() throws Exception {
+		mockMvc.perform(post("/transfers")
+						.header("Idempotency-Key", "k".repeat(101))
+						.contentType(MediaType.APPLICATION_JSON)
+						.content(transferJson("10.00")))
+				.andExpect(status().isBadRequest());
+
+		verify(transferService, never()).transfer(any(), any(), any(), any());
 	}
 
 	@Test

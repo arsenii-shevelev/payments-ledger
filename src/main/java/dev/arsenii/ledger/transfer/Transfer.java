@@ -31,14 +31,28 @@ public class Transfer {
 	@Column(nullable = false)
 	private Instant createdAt;
 
+	@Column(length = 100)
+	private String idempotencyKey;
+
 	protected Transfer() {
 	}
 
 	public Transfer(UUID fromAccountId, UUID toAccountId, BigDecimal amount) {
+		this(fromAccountId, toAccountId, amount, null);
+	}
+
+	public Transfer(UUID fromAccountId, UUID toAccountId, BigDecimal amount, String idempotencyKey) {
 		this.fromAccountId = fromAccountId;
 		this.toAccountId = toAccountId;
 		this.amount = amount;
+		this.idempotencyKey = idempotencyKey;
 		this.createdAt = Instant.now();
+	}
+
+	boolean isSameRequest(UUID fromAccountId, UUID toAccountId, BigDecimal amount) {
+		return this.fromAccountId.equals(fromAccountId)
+				&& this.toAccountId.equals(toAccountId)
+				&& this.amount.compareTo(amount) == 0;
 	}
 
 	public UUID getId() {
@@ -59,6 +73,10 @@ public class Transfer {
 
 	public Instant getCreatedAt() {
 		return createdAt;
+	}
+
+	public String getIdempotencyKey() {
+		return idempotencyKey;
 	}
 
 }
