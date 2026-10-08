@@ -34,13 +34,20 @@ public class LedgerEntry {
 	@Column(nullable = false)
 	private Instant createdAt;
 
+	private UUID transferId;
+
 	protected LedgerEntry() {
 	}
 
 	public LedgerEntry(UUID accountId, EntryType type, BigDecimal amount) {
+		this(accountId, type, amount, null);
+	}
+
+	public LedgerEntry(UUID accountId, EntryType type, BigDecimal amount, UUID transferId) {
 		this.accountId = accountId;
 		this.type = type;
 		this.amount = amount;
+		this.transferId = transferId;
 		this.createdAt = Instant.now();
 	}
 
@@ -62,6 +69,10 @@ public class LedgerEntry {
 
 	public Instant getCreatedAt() {
 		return createdAt;
+	}
+
+	public UUID getTransferId() {
+		return transferId;
 	}
 
 }
