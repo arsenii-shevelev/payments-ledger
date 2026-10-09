@@ -28,15 +28,15 @@ class StatementApiIT {
 
 	@Test
 	void statementShowsTodaysEntries() throws Exception {
+		LocalDate today = LocalDate.now(ZoneOffset.UTC);
 		UUID from = openAccount("Mikko Laine");
 		UUID to = openAccount("Laura Nieminen");
 		deposit(from, "100.00");
 		transfer(from, to, "35.50");
-		String today = LocalDate.now(ZoneOffset.UTC).toString();
 
 		mockMvc.perform(get("/accounts/{id}/statement", from)
-						.param("from", today)
-						.param("to", today))
+						.param("from", today.toString())
+						.param("to", today.plusDays(1).toString()))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.openingBalance").value(0.0))
 				.andExpect(jsonPath("$.closingBalance").value(64.5))
