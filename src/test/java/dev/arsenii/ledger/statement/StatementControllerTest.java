@@ -5,6 +5,8 @@ import dev.arsenii.ledger.ledger.LedgerEntry;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -14,6 +16,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -36,9 +39,10 @@ class StatementControllerTest {
 	void returnsStatement() throws Exception {
 		LocalDate from = LocalDate.of(2026, 10, 1);
 		LocalDate to = LocalDate.of(2026, 10, 31);
+		List<LedgerEntry> entries = List.of(new LedgerEntry(ACCOUNT_ID, EntryType.DEPOSIT, new BigDecimal("50.00")));
 		Statement statement = new Statement(ACCOUNT_ID, "EUR", from, to, new BigDecimal("100.00"),
-				new BigDecimal("150.00"), List.of(new LedgerEntry(ACCOUNT_ID, EntryType.DEPOSIT, new BigDecimal("50.00"))));
-		when(statementService.getStatement(ACCOUNT_ID, from, to)).thenReturn(statement);
+				new BigDecimal("150.00"), new PageImpl<>(entries, PageRequest.of(0, 50), 1));
+		when(statementService.getStatement(ACCOUNT_ID, from, to, 0, 50)).thenReturn(statement);
 
 		mockMvc.perform(get("/accounts/{id}/statement", ACCOUNT_ID)
 						.param("from", "2026-10-01")
@@ -46,6 +50,9 @@ class StatementControllerTest {
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.openingBalance").value(100.0))
 				.andExpect(jsonPath("$.closingBalance").value(150.0))
+				.andExpect(jsonPath("$.page").value(0))
+				.andExpect(jsonPath("$.size").value(50))
+				.andExpect(jsonPath("$.totalEntries").value(1))
 				.andExpect(jsonPath("$.entries[0].type").value("DEPOSIT"))
 				.andExpect(jsonPath("$.entries[0].amount").value(50.0));
 	}
@@ -57,7 +64,18 @@ class StatementControllerTest {
 						.param("to", "2026-10-01"))
 				.andExpect(status().isBadRequest());
 
-		verify(statementService, never()).getStatement(any(), any(), any());
+		verify(statementService, never()).getStatement(any(), any(), any(), anyInt(), anyInt());
+	}
+
+	@Test
+	void rejectsTooLargePage() throws Exception {
+		mockMvc.perform(get("/accounts/{id}/statement", ACCOUNT_ID)
+						.param("from", "2026-10-01")
+						.param("to", "2026-10-31")
+						.param("size", "500"))
+				.andExpect(status().isBadRequest());
+
+		verify(statementService, never()).getStatement(any(), any(), any(), anyInt(), anyInt());
 	}
 
 	@Test

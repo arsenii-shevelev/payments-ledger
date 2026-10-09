@@ -62,6 +62,34 @@ class StatementApiIT {
 	}
 
 	@Test
+	void entriesComeInPagesWithTheSameBalances() throws Exception {
+		UUID account = openAccount("Mikko Laine");
+		deposit(account, "10.00");
+		deposit(account, "20.00");
+		deposit(account, "30.00");
+		String yesterday = LocalDate.now(ZoneOffset.UTC).minusDays(1).toString();
+		String tomorrow = LocalDate.now(ZoneOffset.UTC).plusDays(1).toString();
+
+		mockMvc.perform(get("/accounts/{id}/statement", account)
+						.param("from", yesterday)
+						.param("to", tomorrow)
+						.param("size", "2"))
+				.andExpect(jsonPath("$.totalEntries").value(3))
+				.andExpect(jsonPath("$.entries.length()").value(2))
+				.andExpect(jsonPath("$.entries[0].amount").value(10.0))
+				.andExpect(jsonPath("$.closingBalance").value(60.0));
+
+		mockMvc.perform(get("/accounts/{id}/statement", account)
+						.param("from", yesterday)
+						.param("to", tomorrow)
+						.param("size", "2")
+						.param("page", "1"))
+				.andExpect(jsonPath("$.entries.length()").value(1))
+				.andExpect(jsonPath("$.entries[0].amount").value(30.0))
+				.andExpect(jsonPath("$.closingBalance").value(60.0));
+	}
+
+	@Test
 	void statementForUnknownAccountReturnsNotFound() throws Exception {
 		mockMvc.perform(get("/accounts/{id}/statement", UUID.fromString("00000000-0000-0000-0000-000000000005"))
 						.param("from", "2026-10-01")

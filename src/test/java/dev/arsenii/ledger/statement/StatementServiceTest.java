@@ -11,6 +11,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -38,23 +40,24 @@ class StatementServiceTest {
 	private StatementService statementService;
 
 	@Test
-	void closingBalanceIsOpeningBalancePlusEntries() {
-		LocalDate from = LocalDate.of(2026, 10, 1);
-		LocalDate to = LocalDate.of(2026, 10, 31);
+	void balancesCoverWholePeriodNotJustThePage() {
 		Instant start = Instant.parse("2026-10-01T00:00:00Z");
 		Instant end = Instant.parse("2026-11-01T00:00:00Z");
+		PageRequest firstPage = PageRequest.of(0, 1);
 		when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(new Account("Anna Virtanen", "EUR")));
 		when(ledgerEntryRepository.sumAmountsBefore(ACCOUNT_ID, start)).thenReturn(new BigDecimal("100.00"));
-		when(ledgerEntryRepository.findForPeriod(ACCOUNT_ID, start, end)).thenReturn(List.of(
-				new LedgerEntry(ACCOUNT_ID, EntryType.DEPOSIT, new BigDecimal("50.00")),
-				new LedgerEntry(ACCOUNT_ID, EntryType.TRANSFER_OUT, new BigDecimal("-30.25"))));
+		when(ledgerEntryRepository.sumAmountsBefore(ACCOUNT_ID, end)).thenReturn(new BigDecimal("119.75"));
+		when(ledgerEntryRepository.findForPeriod(ACCOUNT_ID, start, end, firstPage)).thenReturn(new PageImpl<>(
+				List.of(new LedgerEntry(ACCOUNT_ID, EntryType.DEPOSIT, new BigDecimal("50.00"))), firstPage, 2));
 
-		Statement statement = statementService.getStatement(ACCOUNT_ID, from, to);
+		Statement statement = statementService.getStatement(ACCOUNT_ID, LocalDate.of(2026, 10, 1),
+				LocalDate.of(2026, 10, 31), 0, 1);
 
 		assertThat(statement.currency()).isEqualTo("EUR");
 		assertThat(statement.openingBalance()).isEqualByComparingTo("100.00");
 		assertThat(statement.closingBalance()).isEqualByComparingTo("119.75");
-		assertThat(statement.entries()).hasSize(2);
+		assertThat(statement.entries().getContent()).hasSize(1);
+		assertThat(statement.entries().getTotalElements()).isEqualTo(2);
 	}
 
 	@Test
@@ -62,7 +65,7 @@ class StatementServiceTest {
 		when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.empty());
 
 		assertThatThrownBy(() -> statementService.getStatement(ACCOUNT_ID, LocalDate.of(2026, 10, 1),
-				LocalDate.of(2026, 10, 31)))
+				LocalDate.of(2026, 10, 31), 0, 50))
 				.isInstanceOf(AccountNotFoundException.class);
 	}
 

@@ -5,14 +5,16 @@ import dev.arsenii.ledger.account.AccountNotFoundException;
 import dev.arsenii.ledger.account.AccountRepository;
 import dev.arsenii.ledger.ledger.LedgerEntry;
 import dev.arsenii.ledger.ledger.LedgerEntryRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
-import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -26,8 +28,8 @@ public class StatementService {
 		this.ledgerEntryRepository = ledgerEntryRepository;
 	}
 
-	@Transactional(readOnly = true)
-	public Statement getStatement(UUID accountId, LocalDate from, LocalDate to) {
+	@Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
+	public Statement getStatement(UUID accountId, LocalDate from, LocalDate to, int page, int size) {
 		Account account = accountRepository.findById(accountId)
 				.orElseThrow(() -> new AccountNotFoundException(accountId));
 
@@ -35,10 +37,8 @@ public class StatementService {
 		Instant end = to.plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant();
 
 		BigDecimal openingBalance = ledgerEntryRepository.sumAmountsBefore(accountId, start).setScale(2);
-		List<LedgerEntry> entries = ledgerEntryRepository.findForPeriod(accountId, start, end);
-		BigDecimal closingBalance = entries.stream()
-				.map(LedgerEntry::getAmount)
-				.reduce(openingBalance, BigDecimal::add);
+		BigDecimal closingBalance = ledgerEntryRepository.sumAmountsBefore(accountId, end).setScale(2);
+		Page<LedgerEntry> entries = ledgerEntryRepository.findForPeriod(accountId, start, end, PageRequest.of(page, size));
 
 		return new Statement(accountId, account.getCurrency(), from, to, openingBalance, closingBalance, entries);
 	}

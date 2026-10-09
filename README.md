@@ -47,6 +47,7 @@ Keys only have to be unique per sending account. Using the same key for a differ
 ## Statements
 
 `GET /accounts/{id}/statement?from=2026-10-01&to=2026-10-31` gives the ledger entries for those days and the balance before and after them. Dates are in UTC and both days count.
+Entries come in pages, use `page` and `size` (50 by default, 200 at most). The balances are always for the whole period, not just the page.
 
 ## Auth
 

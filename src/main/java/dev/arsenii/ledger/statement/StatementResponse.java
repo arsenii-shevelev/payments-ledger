@@ -10,7 +10,8 @@ import java.util.List;
 import java.util.UUID;
 
 public record StatementResponse(UUID accountId, String currency, LocalDate from, LocalDate to,
-		BigDecimal openingBalance, BigDecimal closingBalance, List<Entry> entries) {
+		BigDecimal openingBalance, BigDecimal closingBalance, int page, int size, long totalEntries,
+		List<Entry> entries) {
 
 	public record Entry(EntryType type, BigDecimal amount, UUID transferId, Instant createdAt) {
 
@@ -22,8 +23,9 @@ public record StatementResponse(UUID accountId, String currency, LocalDate from,
 
 	static StatementResponse from(Statement statement) {
 		return new StatementResponse(statement.accountId(), statement.currency(), statement.from(), statement.to(),
-				statement.openingBalance(), statement.closingBalance(),
-				statement.entries().stream().map(Entry::from).toList());
+				statement.openingBalance(), statement.closingBalance(), statement.entries().getNumber(),
+				statement.entries().getSize(), statement.entries().getTotalElements(),
+				statement.entries().map(Entry::from).getContent());
 	}
 
 }

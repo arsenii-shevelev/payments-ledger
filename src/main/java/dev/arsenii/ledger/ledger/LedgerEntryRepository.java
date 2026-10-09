@@ -1,5 +1,7 @@
 package dev.arsenii.ledger.ledger;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -23,8 +25,8 @@ public interface LedgerEntryRepository extends JpaRepository<LedgerEntry, UUID> 
 	@Query("""
 			select e from LedgerEntry e
 			where e.accountId = :accountId and e.createdAt >= :from and e.createdAt < :to
-			order by e.createdAt""")
-	List<LedgerEntry> findForPeriod(@Param("accountId") UUID accountId, @Param("from") Instant from,
-			@Param("to") Instant to);
+			order by e.createdAt, e.id""")
+	Page<LedgerEntry> findForPeriod(@Param("accountId") UUID accountId, @Param("from") Instant from,
+			@Param("to") Instant to, Pageable pageable);
 
 }
