@@ -7,3 +7,21 @@ services:
       - 'POSTGRES_PASSWORD=ledger'
     ports:
       - '5432'
+    healthcheck:
+      test: ['CMD', 'pg_isready', '-U', 'ledger', '-d', 'ledger']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  app:
+    build: .
+    profiles: ['app']
+    environment:
+      - 'SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/ledger'
+      - 'SPRING_DATASOURCE_USERNAME=ledger'
+      - 'SPRING_DATASOURCE_PASSWORD=ledger'
+    ports:
+      - '8080:8080'
+    depends_on:
+      postgres:
+        condition: service_healthy
