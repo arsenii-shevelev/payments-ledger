@@ -33,7 +33,7 @@ Spring Boot starts Postgres from `compose.yaml` on its own.
 
 ## Transfers
 
-Both accounts get locked with `select ... for update`, always the one with the smaller id first. Otherwise two transfers going opposite ways could deadlock.
+Both accounts get locked with `select ... for update`, always the one with the smaller id first. Otherwise two transfers going opposite ways could deadlock. `TransferConcurrencyIT` runs a hundred transfers both ways at once to check that, and also that parallel transfers can't take an account below zero.
 
 Transfers are double-entry. Each one adds two ledger entries, minus on the sender's side and plus on the receiver's, so together they come to zero.
 
@@ -62,5 +62,5 @@ Work in progress.
 - [x] transfers between accounts
 - [x] idempotency keys for transfers
 - [x] account statements
-- [ ] concurrency test for transfers
+- [x] concurrency test for transfers
 - [ ] Dockerfile
