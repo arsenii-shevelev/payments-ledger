@@ -44,3 +44,22 @@ jobs:
         with:
           name: coverage-report
           path: target/site/jacoco
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+
+      - name: Start app and Postgres
+        run: docker compose --profile app up --build --detach --wait
+
+      - name: Open an account
+        run: |
+          curl --fail --retry 20 --retry-all-errors --retry-delay 3 \
+            -H 'Content-Type: application/json' \
+            -d '{"ownerName": "Mikko Laine", "currency": "EUR"}' \
+            http://localhost:8080/accounts
+
+      - name: App logs
+        if: failure()
+        run: docker compose --profile app logs app
