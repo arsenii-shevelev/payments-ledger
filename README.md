@@ -15,6 +15,14 @@ Need Java 21 and Docker.
 
 Spring Boot starts Postgres from `compose.yaml` on its own.
 
+Or run everything in Docker, the app too:
+
+```
+docker compose --profile app up --build
+```
+
+The app is then on `localhost:8080`. CI does the same on every PR and opens one account to check that it really starts.
+
 ```
 ./mvnw test      # unit tests
 ./mvnw verify    # unit + integration tests (Testcontainers)
@@ -63,4 +71,4 @@ Work in progress.
 - [x] idempotency keys for transfers
 - [x] account statements
 - [x] concurrency test for transfers
-- [ ] Dockerfile
+- [x] Dockerfile
