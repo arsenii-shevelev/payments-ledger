@@ -63,7 +63,7 @@ No auth here. The idea is that a gateway in front of the service checks who's ca
 
 ## Status
 
-Work in progress.
+Done for now.
 
 - [x] accounts
 - [x] deposits
@@ -72,3 +72,8 @@ Work in progress.
 - [x] account statements
 - [x] concurrency test for transfers
 - [x] Dockerfile
+
+Things I might add later:
+
+- [ ] auth with checks that you can only touch your own accounts
+- [ ] currency conversion for transfers
